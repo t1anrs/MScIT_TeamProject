@@ -1,45 +1,51 @@
 import java.util.Random;
 
 public class Game {
-	// Human player is always first position in player array
-		protected static final int HUMAN_PLAYER = 0;
-		
-		// Static game states
-		protected static final int STATE_ROUND_WON = 1;
-		protected static final int STATE_ROUND_DRAW = 2;
+	
 		
 		// Instance variables
-		private Deck communalPile;
-		private Deck mainDeck;
+		private Decklist totalDeck, communalDeck;
 		private Player[] player;
-		private Player currentPlayer;
-		private int numberOfOppent;
-		private int totalRounds;
-		private int draws;
+		private Player currentPlayer, roundWinner;
+		private int numberOfOpponent;
+		private int roundNum, drawNum;
+		private int highestAttributeValue, comparedAttributeValue, drawAttributeValue;
+		
+		// set human player as the first position of Player 
+		protected static final int HUMAN_PLAYER = 0;		
+		// set 1 for win and 2 for draw 
+		protected static final int STATE_ROUND_WON = 1;
+		protected static final int STATE_ROUND_DRAW = 2;
 
 		/**
 		 * Constructor for a Game instance
-		 * @param mainDeck: a Deck instance containing the full deck of cards as read in from a separate file */
-		public Game(Deck mainDeck) {
-			this.mainDeck = mainDeck;
-			communalPile = new Deck(mainDeck.getCapacity(), mainDeck.getCategories());
+		 * @param totallDeck: a Decklist including the cards 
+		 * 		
+		 */
+		public Game(Decklist totalDeck) {
+			this.totalDeck = totalDeck;
+			communalDeck = new Decklist(totalDeck.getCategory());
 		}
 		
 		/**
-		 * @return a random int within the range of active players */
-		private int randomiseFirstPlayer() {
-			return new Random().nextInt(numberOfOppent + 1);
+		 * @return a random integer to set as the first player 
+		 * 
+		 */
+		private int randomFirstPlayer() {
+			return new Random().nextInt(numberOfOpponent + 1);
 		}
 		
 		/**
+		 * shuffling the deck 
 		 * dealing the top card to each player by turn until there are no cards left
 		 */
-		private void initPlayerDecks() {
+		private void dealCardToPlayer() {
 			
-			mainDeck.shuffleDeck();
+			totalDeck.shuffleDeck();
 			
-			for(int i = 0, j = 0; i < mainDeck.getSize(); i++) {
-				if(j < numberOfOppent) {
+			for(int i = 0, j = 0; i < totalDeck.getCapacity(); i++) {
+				player[j].getDeck().addCardToFirst(totalDeck.showTheTopCard());
+				if(j < numberOfOpponent) {
 					j++;
 				}
 				else {
@@ -47,126 +53,93 @@ public class Game {
 				}
 			
 			}
-			
-			// For assessment testing
-			System.out.println("SHUFFLED DECK:");
-			System.out.println(mainDeck.toString());
+				
 		}
 		
 		/**
-		 * Initiate a new game state and begins the first round of a new game
-		 * @param numofCompPlayers: the number of opponents chosen by the human player when they start the game
+		 * Initiate a new game state and prepare to start the first round of a new game
+		 * @param sumofopponents: the sum of opponents chosen by the human player when they start the game
+		 * 
 		 */
-		public void startGame(int numofCompPlayers) {
-			this.numberOfOppent = numofCompPlayers;
+		public void startFirstRound(int numberOfOpponent) {
+			this.numberOfOpponent = numberOfOpponent;
 			
-			player = new Player[numofCompPlayers + 1];
-			for(int playerNumber = 0; playerNumber < numofCompPlayers + 1; playerNumber++) {
-				player[playerNumber] = new Player(playerNumber, new Deck(mainDeck.getCapacity(), mainDeck.getCategories()));
+			player = new Player[numberOfOpponent + 1];
+			for(int playerNumber = 0; playerNumber < numberOfOpponent + 1; playerNumber++) {
+				player[playerNumber] = new Player(playerNumber, new Decklist(totalDeck.getCategory()));
 			}
-			
-			// initiate the deck
-			initPlayerDecks();  
-			currentPlayer = player[randomiseFirstPlayer()];
-			totalRounds = 0;
-			draws = 0;
+						
+			dealCardToPlayer();  
+			currentPlayer = player[randomFirstPlayer()];
+			roundNum = 0;
+			drawNum = 0;
 		}
 		
 		
 		
 		/**
-		 * Finds the player with the highest value in the category chosen by the current player and returns the game state.
-		 * In the result of a win the current player variable is set to the round winner
-		 * @param chosenCategory: an int which represents the array position of the chosen category on the card instance 
-		 * @return the game's state at the end of the round as a static int value defined within the Game class
+		 * current player choose a category and compare it with all other player who has cards
+		 * set the player with the highest attribute value as the round winner or if draw keep the current player not change
+		 * then returns the game state.
+		 * @param chosenCategory: an integer which represents a category chosen by player
+		 * @return 1 for win or 2 for draw
+		 * 
 		 */
 		
-		protected int calculateRoundResult(int chosenCategory) {
+		protected int eachRoundRun(int chosenCategory) {
+						
+			highestAttributeValue = currentPlayer.getDeck().showTheTopCard().getCategoryValue(chosenCategory);
+			roundWinner = currentPlayer;			
+			comparedAttributeValue = 0;
+			drawAttributeValue = 0;
+			roundNum++;
 			
-			// For assessment testing
-			System.out.println("THIS ROUND:");
-			if(currentPlayer == getHumanPlayer()) {
-				System.out.print("YOU Have Selected: ");
-			}
-			else {
-				System.out.print("PLAYER" + currentPlayer.getPlayerNumber() + "has selected: ");
-			}
-			
-			
-			System.out.println(currentPlayer.getDeck().getCategoryName(chosenCategory) + 
-					", on the " + currentPlayer.getDeck().seeTopCard().getTitle() + "(" + 
-					currentPlayer.getDeck().seeTopCard().getCategoryValue(chosenCategory) + ")");
-			
-			
-			totalRounds++;
-			
-			// Assume current player will win most of the time, so set initial highest value to their choice
-			int highestValue = currentPlayer.getDeck().seeTopCard().getCategoryValue(chosenCategory);
-			Player roundWinner = currentPlayer;
-			
-			int comparedPlayerValue = 0;
-			int drawValue = 0;
-			
-			// Iterate through each player that has a card; compare values, store highest, record any draws
-			for(int i = 0; i < numberOfOppent + 1; i++) {
+			// compare values iterate through each player who has a card
+			for(int i = 0; i < numberOfOpponent + 1; i++) {
 				
 				if(player[i] != currentPlayer && player[i].getDeck().hasCard()) {
+										
+					comparedAttributeValue = player[i].getDeck().showTheTopCard().getCategoryValue(chosenCategory);
 					
-					// For assessment testing
-					if(player[i] == getHumanPlayer()) {
-						System.out.print("You have: ");
-					}
-					else {
-						System.out.print("PLAYER " + i + " has: ");
-					}
-					System.out.print("the " + player[i].getDeck().seeTopCard().getTitle() + "(" 
-							+ player[i].getDeck().seeTopCard().getCategoryValue(chosenCategory) + ")");
-					
-					comparedPlayerValue = player[i].getDeck().seeTopCard().getCategoryValue(chosenCategory);
-					
-					if(comparedPlayerValue > highestValue) {
-						highestValue = comparedPlayerValue;
+					if(comparedAttributeValue > highestAttributeValue) {
+						highestAttributeValue = comparedAttributeValue;
 						roundWinner = player[i];
 					}
-					else if(comparedPlayerValue == highestValue) {
-						drawValue = highestValue;
+					else if(comparedAttributeValue == highestAttributeValue) {
+						drawAttributeValue = highestAttributeValue;
 					}
 					else {
-						// Compared value is < highest value
+						// continue when compared value< highest value
 						continue;
 					}
 					
 				}
+				
 			}
-			
-			// For assessment testing
-			System.out.println("---------------------------------\n");
-			
-			
-			//Work out round result and return as static int representing game state
-		    if(highestValue == drawValue) {
-		    	draws++;
+						
+			// return an integer representing round won or draw
+		    if(highestAttributeValue == drawAttributeValue) {
+		    	drawNum++;
 		    	return STATE_ROUND_DRAW;
-		    	
 		    }
 		    else {
 		    	currentPlayer = roundWinner;
 		    	currentPlayer.wonRound();
-		    	draws = 0;
+		    	drawNum = 0;
 		    	return STATE_ROUND_WON;
 		    }		    
 		    
 		}
 		
 		/**
-		 * Returns true if the game has been won by checking if anyone except the winner of the round
-	     * will have cards to play in the next round after their current card is transferred 
-		 * @return boolean representing whether the game has been won
+		 * check if anyone has a card except the last round winner
+		 * @return true if someone has been won
+		 * 
 		 */
 		public boolean checkGameWon() {
-			for(int i = 0; i < numberOfOppent + 1; i++) {
+			for(int i = 0; i < numberOfOpponent + 1; i++) {
 				// At least two players will have cards to play in the next round
-				if(player[i] != currentPlayer && player[i].getDeck().getSize() > 1) {				
+				if(player[i] != currentPlayer && player[i].getDeck().getCapacity() > 1) {				
 					return false;		
 			    }  
 		    }
@@ -175,24 +148,21 @@ public class Game {
 		}
 		
 		/**
-		 * Transfers to the round winner any cards in the communal pile from previous round draws
-		 * and all the cards played in this round 
+		 * the round has a winner
+		 * then transfer the card in communal deck and all the cards played in this round to the round winner 
+		 *  
 		 */
 		public void transferCardsToWinner() {
 			
-			// Transfer cards from communal pile if there are any
-			if(communalPile.hasCard()) {
+			// transfer cards from communal deck to last of the list
+			if(communalDeck.hasCard()) {
 				do {
-					currentPlayer.getDeck().addCardToBottom(communalPile.getTopCard());
-				} while(communalPile.hasCard());
-				
-				// For assessment testing
-				System.out.println("COMMUNAL PILE:\n EMPTY!");
-				System.out.println(communalPile.toString());
+					currentPlayer.getDeck().addCardToLast(communalDeck.getTheTopCard());
+				} while(communalDeck.hasCard());
 			}
 			
-			// Give currentPlayer everyone's played card (including their own as it goes to bottom)
-			for(int i = 0; i < numberOfOppent + 1; i++) {
+			// give winner everyone's played-cards  to last of the list
+			for(int i = 0; i < numberOfOpponent + 1; i++) {
 				if(player[i].getDeck().hasCard()) {
 					player[i].transferCardTo(currentPlayer.getDeck());
 				}
@@ -201,23 +171,20 @@ public class Game {
 		}
 		
 		/**
-		 * Transfers the top cards from all players participating in the round into the communal pile
+		 * the round is draw 
+		 * then transfer all top cards into the communal deck and check the player has a card or not before
+		 * 
 		 */
 		public void transferCardsToCommunal() {
-			for(int i = 0; i < numberOfOppent; i++) {
-				// Player has at least one card and thus has participated in the round
+			for(int i = 0; i < numberOfOpponent; i++) {
+				
 				if(player[i].getDeck().hasCard()) {
-					player[i].transferCardTo(communalPile);
+					player[i].transferCardTo(communalDeck);
 				}
 			}
-			// For assessment testing
-			System.out.println("COMMUNAL PILE:");
-			System.out.println(communalPile.toString());
 			
-			// Check that the current player still has a card - in case of consecutive draws: pass to any other player with a card
-			// Specification notes that the case where no players have cards does not need to be dealt with
 			if(!currentPlayer.getDeck().hasCard()) {
-				for(int i = 0; i <= numberOfOppent; i++) {
+				for(int i = 0; i <= numberOfOpponent; i++) {
 					if(player[i].getDeck().hasCard()) {
 						currentPlayer = player[i];
 					}
@@ -233,20 +200,20 @@ public class Game {
 		
 		// Accessors
 		
-		public Deck getCommunalPile(){
-			return communalPile;
+		public Decklist getCommunalDeck(){
+			return communalDeck;
 		}
 		
 		public Player getCurrentPlayer() {
 			return currentPlayer;
 		}
 		
-		public int getTotalRounds() {
-			return totalRounds;
+		public int getRoundNum() {
+			return roundNum;
 		}
 
-		public int getDraws() {
-			return draws;
+		public int getDrawNum() {
+			return drawNum;
 		}
 		
 		public Player getPlayer(int i){
@@ -254,7 +221,7 @@ public class Game {
 		}
 		
 		public int getNumOfPlayers() {
-			return numberOfOppent + 1;
+			return numberOfOpponent + 1;
 		}
 
 }
