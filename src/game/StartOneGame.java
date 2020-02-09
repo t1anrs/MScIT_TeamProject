@@ -7,7 +7,7 @@ import java.util.Scanner;
 public class StartOneGame {
 	// Instance variables
 	private Game newgame;
-	private Deck newdeck;
+	private Decklist newdeck;
 	private Scanner sc;
 	private int numofchosencate;  //the number of the chosen category
 	private int statenumber;
@@ -16,13 +16,13 @@ public class StartOneGame {
 	 * Start a game and choose a category if the current player is human
 	 */
 	public StartOneGame() {
-		newgame = new Game(new Deck(newdeck.getCapacity(),newdeck.getCategories()));
-		newgame.startGame(4); // the number of opponents
+		newgame = new Game(new Decklist(newdeck.getCategory()));
+		newgame.startFirstRound(4); // the number of opponents
 		
 		if(!newgame.checkGameWon()) {      // check is anyone won
 				
-			if(newgame.getDraws() != 0) {
-				newgame.calculateRoundResult(numofchosencate);
+			if(newgame.getDrawNum() != 0) {
+				newgame.eachRoundRun(numofchosencate);
 			}
 			
 			else {
@@ -40,7 +40,7 @@ public class StartOneGame {
 			
 			
 			    
-			statenumber = newgame.calculateRoundResult(numofchosencate);
+			statenumber = newgame.eachRoundRun(numofchosencate);
 			
 			if(statenumber==1) {
 				newgame.transferCardsToWinner();
